@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 100" width="250" height="100">
+  <rect width="250" height="100" rx="20" fill="#fff8e7"/>
+  <g transform="translate(10 10) scale(0.625)">
+    <rect width="128" height="128" rx="28" fill="#2b8a3e"/>
+    <path d="M24 106 V62 L39 44 L64 31 L89 44 L104 62 V106 Z" fill="#fff8e7"/>
+    <path d="M64 70 V57" stroke="#2b8a3e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M64 59 C56 59 51 54 51 47 C58 47 64 51 64 59 Z" fill="#2b8a3e"/>
+    <path d="M64 57 C64 49 70 44 77 44 C77 52 71 57 64 57 Z" fill="#2b8a3e"/>
+    <rect x="50" y="76" width="28" height="30" fill="#2b8a3e"/>
+    <path d="M50 76 L78 106 M78 76 L50 106" stroke="#fff8e7" stroke-width="4"/>
+  </g>
+  <g font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="27" font-weight="700" fill="#2b8a3e">
+    <text x="102" y="45">Homestead</text>
+    <text x="102" y="77">Finance</text>
+  </g>
+</svg>

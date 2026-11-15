@@ -1,0 +1,551 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Homestead Finance",
+    "version": "1"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "description": "Liveness and database state. Used by the Supervisor watchdog; needs no user.",
+        "operationId": "system_health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Me",
+        "description": "The Home Assistant user making this request.",
+        "operationId": "system_me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No Home Assistant user on the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/farm": {
+      "get": {
+        "tags": [
+          "farm"
+        ],
+        "summary": "Read Farm",
+        "operationId": "farm_read_farm",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FarmRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No Home Assistant user on the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spike/entries": {
+      "post": {
+        "tags": [
+          "spike"
+        ],
+        "summary": "Post Entry",
+        "operationId": "spike_post_entry",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpikeEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpikeEntryAck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No Home Assistant user on the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Already stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpikeEntryAck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "spike"
+        ],
+        "summary": "Delete Entries",
+        "operationId": "spike_delete_entries",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No Home Assistant user on the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spike/summary": {
+      "get": {
+        "tags": [
+          "spike"
+        ],
+        "summary": "Get Summary",
+        "operationId": "spike_get_summary",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpikeSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No Home Assistant user on the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EnteredVia": {
+        "type": "string",
+        "enum": [
+          "app",
+          "ai",
+          "system"
+        ],
+        "title": "EnteredVia"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail"
+      },
+      "FarmRead": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "entered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entered By"
+          },
+          "entered_via": {
+            "$ref": "#/components/schemas/EnteredVia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "name",
+          "created_at",
+          "entered_by",
+          "entered_via"
+        ],
+        "title": "FarmRead"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "schema_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Revision"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "schema_revision",
+          "database"
+        ],
+        "title": "Health"
+      },
+      "Me": {
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "ingress_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingress Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "display_name",
+          "ingress_path"
+        ],
+        "title": "Me"
+      },
+      "SpikeEntryAck": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "duplicate"
+            ],
+            "title": "Status"
+          },
+          "received_count": {
+            "type": "integer",
+            "title": "Received Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "status",
+          "received_count"
+        ],
+        "title": "SpikeEntryAck"
+      },
+      "SpikeEntryIn": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Note",
+            "default": ""
+          },
+          "client_created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "client_created_at"
+        ],
+        "title": "SpikeEntryIn"
+      },
+      "SpikeEntryRead": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "client_created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Created At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "received_count": {
+            "type": "integer",
+            "title": "Received Count"
+          },
+          "entered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entered By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "note",
+          "client_created_at",
+          "created_at",
+          "received_count",
+          "entered_by"
+        ],
+        "title": "SpikeEntryRead"
+      },
+      "SpikeSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "duplicates_received": {
+            "type": "integer",
+            "title": "Duplicates Received"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/SpikeEntryRead"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "duplicates_received",
+          "recent"
+        ],
+        "title": "SpikeSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
