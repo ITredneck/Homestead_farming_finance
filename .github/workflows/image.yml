@@ -1,0 +1,194 @@
+name: App image
+
+# Pull requests: build both architectures and smoke-test them; nothing is pushed.
+# Tags v*: the same, then push per-arch images and a multi-arch manifest to GHCR.
+# Release steps are in CLAUDE.md (Commands > Release).
+on:
+  pull_request:
+    paths:
+      - backend/**
+      - frontend/**
+      - docker/**
+      - homestead_finance/**
+      - .dockerignore
+      - .github/workflows/image.yml
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Registry paths must be lowercase.
+  REGISTRY_PREFIX: ghcr.io/itredneck
+  IMAGE_NAME: homestead-finance
+  ARCHITECTURES: '["amd64", "aarch64"]'
+
+jobs:
+  information:
+    name: Version and build matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Read the version from config.yaml
+        id: version
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' homestead_finance/config.yaml)
+          if [ -z "$version" ]; then
+            echo "::error::No version found in homestead_finance/config.yaml"
+            exit 1
+          fi
+          publish=false
+          if [[ "$REF" == refs/tags/v* ]]; then
+            if [ "${REF_NAME#v}" != "$version" ]; then
+              echo "::error::Tag $REF_NAME doesn't match version $version in homestead_finance/config.yaml"
+              exit 1
+            fi
+            publish=true
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - name: Build matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.09.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+          registry-prefix: ${{ env.REGISTRY_PREFIX }}
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: information
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Cosign signing
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.information.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build
+        uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          context: .
+          file: docker/Dockerfile
+          image: ${{ matrix.image }}
+          image-tags: ${{ needs.information.outputs.version }}
+          version: ${{ needs.information.outputs.version }}
+          labels: |
+            io.hass.type=app
+            io.hass.name=Homestead Finance
+            io.hass.description=Farm finance and records for homesteads
+            io.hass.url=https://github.com/${{ github.repository }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          load: "true"
+          push: "false"
+          cosign: "false"
+
+      - name: Smoke test
+        env:
+          IMAGE: ${{ matrix.image }}:${{ needs.information.outputs.version }}
+          VERSION: ${{ needs.information.outputs.version }}
+        run: sh docker/smoke-test.sh "$IMAGE" "$VERSION"
+
+      - name: Push and sign
+        if: needs.information.outputs.publish == 'true'
+        uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          context: .
+          file: docker/Dockerfile
+          image: ${{ matrix.image }}
+          image-tags: ${{ needs.information.outputs.version }}
+          version: ${{ needs.information.outputs.version }}
+          labels: |
+            io.hass.type=app
+            io.hass.name=Homestead Finance
+            io.hass.description=Farm finance and records for homesteads
+            io.hass.url=https://github.com/${{ github.repository }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          push: "true"
+          # A published version is never overwritten (safe to re-run).
+          skip-existing: ${{ needs.information.outputs.version }}
+
+  manifest:
+    name: Publish multi-arch manifest
+    needs: [information, build]
+    if: needs.information.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Cosign signing
+    env:
+      VERSION: ${{ needs.information.outputs.version }}
+      SOURCE: https://github.com/${{ github.repository }}
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v4.1.3 # has no floating major tag
+
+      # Like home-assistant/builder's publish-multi-arch-manifest, plus annotations on the
+      # index. GHCR links a new package to its repository through
+      # org.opencontainers.image.source; without that link, GITHUB_TOKEN may not create
+      # the package (403 denied).
+      - name: Create, push and sign the manifest
+        run: |
+          image="$REGISTRY_PREFIX/$IMAGE_NAME"
+          if docker buildx imagetools inspect "$image:$VERSION" > /dev/null 2>&1; then
+            echo "$image:$VERSION already exists; a published version is never overwritten."
+            exit 0
+          fi
+          sources=()
+          for arch in $(jq -r '.[]' <<< "$ARCHITECTURES"); do
+            sources+=("$REGISTRY_PREFIX/$arch-$IMAGE_NAME:$VERSION")
+          done
+          metadata="$(mktemp)"
+          docker buildx imagetools create \
+            --metadata-file "$metadata" \
+            --annotation "index:org.opencontainers.image.source=$SOURCE" \
+            --annotation "index:org.opencontainers.image.description=Farm finance and records for homesteads" \
+            --annotation "index:org.opencontainers.image.licenses=AGPL-3.0-or-later" \
+            --tag "$image:$VERSION" \
+            "${sources[@]}"
+          digest="$(jq -r '.["containerimage.descriptor"].digest' "$metadata")"
+          cosign sign --yes "$image@$digest"
+          docker buildx imagetools inspect "$image:$VERSION"
+
+      # The Supervisor pulls without logging in, so the image must be public.
+      - name: Check that anyone can pull it
+        run: |
+          repo="${REGISTRY_PREFIX#ghcr.io/}/$IMAGE_NAME"
+          token=$(curl -fsS "https://ghcr.io/token?scope=repository:$repo:pull" | jq -r .token)
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $token" \
+            -H "Accept: application/vnd.oci.image.index.v1+json" \
+            "https://ghcr.io/v2/$repo/manifests/$VERSION")
+          if [ "$status" != "200" ]; then
+            echo "::error::Anonymous pull of $IMAGE_NAME:$VERSION returned HTTP $status. Make the package public in its GitHub package settings."
+            exit 1
+          fi
+          echo "Anonymous pull works (HTTP $status)."

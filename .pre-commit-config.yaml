@@ -1,0 +1,45 @@
+# Git hooks. Set up once with:  uvx pre-commit install
+# Run on everything:            uvx pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents] # pnpm 12 lockfiles hold several documents
+      - id: check-json
+      - id: check-added-large-files
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5 # keep in step with ruff in backend/uv.lock
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: app-config-layout
+        name: config.yaml/yml/json only in homestead_finance/
+        # The Supervisor reads any file with these names, at any depth, as an app.
+        language: fail
+        entry: Only homestead_finance/ may contain a file named config.yaml, config.yml or config.json
+        files: (^|/)config\.(ya?ml|json)$
+        exclude: ^homestead_finance/config\.yaml$
+
+      - id: frontend-lint
+        name: eslint (frontend)
+        language: system
+        entry: pnpm --dir frontend lint
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-format
+        name: prettier (frontend)
+        language: system
+        entry: pnpm --dir frontend format:check
+        files: ^frontend/
+        pass_filenames: false
