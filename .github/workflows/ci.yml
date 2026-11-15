@@ -21,7 +21,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3 # has no floating major tag
         with:
           working-directory: backend
           enable-cache: true
@@ -51,7 +51,7 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3 # has no floating major tag
         with:
           working-directory: backend
           enable-cache: true
@@ -90,7 +90,7 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3 # has no floating major tag
         with:
           working-directory: backend
           enable-cache: true
