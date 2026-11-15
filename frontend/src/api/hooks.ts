@@ -15,6 +15,19 @@ export function useHealth() {
   });
 }
 
+export function useFarm() {
+  return useQuery({
+    queryKey: ['farm'],
+    queryFn: async () => {
+      const { data, response } = await api.GET('/api/farm');
+      if (!response.ok) {
+        throw new Error(`Could not load the farm (HTTP ${response.status})`);
+      }
+      return data;
+    },
+  });
+}
+
 export function useMe() {
   return useQuery({
     queryKey: ['me'],

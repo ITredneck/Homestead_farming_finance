@@ -2,12 +2,13 @@ import { Button, Card, Stack, Table, Text, Title } from '@mantine/core';
 import { IconFlask } from '@tabler/icons-react';
 import { Link } from 'react-router';
 
-import { useHealth, useMe } from '../../api/hooks';
+import { useFarm, useHealth, useMe } from '../../api/hooks';
 import { BackLink } from '../../components/BackLink';
 
 export function SettingsPage() {
   const health = useHealth();
   const me = useMe();
+  const farm = useFarm();
 
   const rows: [string, string][] = [
     ['Signed in as', me.data ? (me.data.display_name ?? me.data.name ?? 'Unknown') : '…'],
@@ -15,6 +16,13 @@ export function SettingsPage() {
     [
       'Database',
       health.data ? `${health.data.database} (schema ${health.data.schema_revision ?? '?'})` : '…',
+    ],
+    // Stays the same across restarts and updates: an easy check that data is kept.
+    [
+      'Farm record',
+      farm.data
+        ? `${farm.data.name}, created ${new Date(farm.data.created_at).toLocaleString()}`
+        : '…',
     ],
   ];
 

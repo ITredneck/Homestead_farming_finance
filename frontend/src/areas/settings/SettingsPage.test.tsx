@@ -23,6 +23,13 @@ describe('settings page', () => {
     const fetchMock = stubApi({
       '/api/health': { status: 'ok', version: '0.1.0', schema_revision: '0002', database: 'ok' },
       '/api/me': { user_id: 'u1', name: 'farmer', display_name: 'Farmer Jo', ingress_path: null },
+      '/api/farm': {
+        uuid: '42c4fa7d-fa39-4382-8a0b-ff31d97f6979',
+        name: 'My homestead',
+        created_at: '2026-11-15T02:13:43Z',
+        entered_by: null,
+        entered_via: 'system',
+      },
     });
 
     renderApp('/settings');
@@ -30,8 +37,9 @@ describe('settings page', () => {
     expect(await screen.findByText('Farmer Jo')).toBeInTheDocument();
     expect(await screen.findByText('0.1.0')).toBeInTheDocument();
     expect(screen.getByText('ok (schema 0002)')).toBeInTheDocument();
+    expect(await screen.findByText(/^My homestead, created /)).toBeInTheDocument();
     const paths = fetchMock.mock.calls.map(([request]) => new URL(request.url).pathname);
-    expect(paths).toEqual(expect.arrayContaining(['/api/health', '/api/me']));
+    expect(paths).toEqual(expect.arrayContaining(['/api/health', '/api/me', '/api/farm']));
   });
 
   it('says so when the server cannot be reached', async () => {
