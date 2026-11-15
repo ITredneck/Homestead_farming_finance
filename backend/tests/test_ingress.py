@@ -36,6 +36,12 @@ def test_forwarded_for_header_cannot_spoof_the_gateway(outsider: TestClient) -> 
     assert response.status_code == 403
 
 
+def test_container_healthcheck_over_loopback_is_allowed(app: FastAPI) -> None:
+    # Docker's HEALTHCHECK runs inside the container and connects over loopback.
+    with TestClient(app, client=("127.0.0.1", 50000)) as test_client:
+        assert test_client.get("/api/health").status_code == 200
+
+
 def test_dev_mode_allows_any_address(settings: Settings) -> None:
     app = create_app(settings.model_copy(update={"dev_mode": True}))
     with TestClient(app, client=OUTSIDER) as test_client:

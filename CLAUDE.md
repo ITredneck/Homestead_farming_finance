@@ -21,7 +21,7 @@ The product is a Home Assistant app (HA's name for add-ons since 2026.2; FastAPI
 - **Household cost center:** postings go to owner draws, never to an expense.
 - **AI:** AI writes are tagged as AI. The owner's AI access level (off / receipts / read-only / full) is enforced in the backend.
 - **Ingress:** the frontend uses relative URLs only, because HA ingress serves it under a dynamic base path. Never hardcode `/`. Routing uses hash routes (`#/animals`) so the page URL stays at the ingress root.
-- **Ingress gateway:** only the Supervisor (`172.30.32.2`) may connect. The HA user comes from `X-Remote-User-Id`; `entered_by` stores that id, not the name.
+- **Ingress gateway:** only the Supervisor (`172.30.32.2`) may connect, plus loopback for the container's own Docker HEALTHCHECK. The HA user comes from `X-Remote-User-Id`; `entered_by` stores that id, not the name.
 - **Database sessions:** services that write take a `WriteSession` (it starts `BEGIN IMMEDIATE`); read-only code takes a `ReadSession`.
 - **Repo layout:** only `homestead_finance/` may contain a file named `config.yaml`, `config.yml` or `config.json`. The Supervisor reads any such file in the repo as an app. A pre-commit hook and CI enforce this.
 

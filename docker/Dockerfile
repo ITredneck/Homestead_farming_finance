@@ -42,6 +42,10 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     HF_STATIC_DIR=/opt/homestead_finance/static \
     HF_VERSION=${BUILD_VERSION}
 
+# The Supervisor watches Docker's health status (the old `watchdog` option is obsolete).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8099/api/health', timeout=4)"]
+
 LABEL org.opencontainers.image.title="Homestead Finance" \
       org.opencontainers.image.description="Farm finance and records for homesteads" \
       org.opencontainers.image.source="https://github.com/ITredneck/Homestead_farming_finance" \

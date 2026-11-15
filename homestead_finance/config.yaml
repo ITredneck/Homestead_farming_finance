@@ -15,7 +15,6 @@ image: ghcr.io/itredneck/homestead-finance
 init: false
 
 ingress: true
-ingress_port: 8099
 panel_icon: mdi:barn
 panel_title: Homestead Finance
 # Every Home Assistant user can use the app, not only administrators.
@@ -30,7 +29,7 @@ map:
 # Stop the app while its folder is backed up, so the SQLite database is always
 # consistent in backups (see issue #13).
 backup: cold
-watchdog: http://[HOST]:[PORT:8099]/api/health
+# Health is checked by the image's own Docker HEALTHCHECK (see docker/Dockerfile).
 
 options:
   log_level: info

@@ -21,6 +21,9 @@ LogLevel = Literal["trace", "debug", "info", "notice", "warning", "error", "fata
 
 #: The Home Assistant ingress gateway (the Supervisor) on the internal hassio network.
 INGRESS_GATEWAY = "172.30.32.2"
+#: Loopback, for the container's own Docker HEALTHCHECK. Only processes inside the
+#: container can use it, and they could read the database file directly anyway.
+LOOPBACK = "127.0.0.1"
 
 #: Option keys from homestead_finance/config.yaml that map onto settings fields.
 APP_OPTION_KEYS = frozenset({"log_level"})
@@ -39,7 +42,7 @@ class Settings(BaseSettings):
     dev_mode: bool = False
     log_level: LogLevel = "info"
     trusted_proxies: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: [INGRESS_GATEWAY]
+        default_factory=lambda: [INGRESS_GATEWAY, LOOPBACK]
     )
     static_dir: Path | None = None
     version: str = "dev"

@@ -13,8 +13,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Inside the container 127.0.0.1 stands in for the gateway; everyone else gets 403.
-docker run -d --name "$name" -e HF_TRUSTED_PROXIES=127.0.0.1 "$image" > /dev/null
+# Default settings: the gateway and loopback (inside the container) are trusted, anyone
+# else gets 403. A short health interval lets us see Docker's health status quickly.
+docker run -d --name "$name" --health-interval=3s --health-start-period=60s "$image" > /dev/null
 
 # Prints the HTTP status, then the body.
 probe='import sys, urllib.error, urllib.request
@@ -52,6 +53,18 @@ if echo "$page" | grep -qE '(src|href)="/'; then
   echo "index.html has absolute URLs, which break under ingress"
   exit 1
 fi
+
+echo "Waiting for Docker's HEALTHCHECK to report healthy..."
+tries=0
+until [ "$(docker inspect -f '{{.State.Health.Status}}' "$name")" = "healthy" ]; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 30 ]; then
+    echo "The container never became healthy:"
+    docker inspect -f '{{json .State.Health}}' "$name"
+    exit 1
+  fi
+  sleep 2
+done
 
 address=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$name")
 status=$(docker run --rm --entrypoint python "$image" -c "$probe" "http://$address:8099/api/health" | head -n 1)

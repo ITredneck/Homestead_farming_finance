@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from homestead_finance.core.settings import INGRESS_GATEWAY, Settings
+from homestead_finance.core.settings import INGRESS_GATEWAY, LOOPBACK, Settings
 
 
 def write_options(path: Path, options: dict[str, object]) -> None:
@@ -16,7 +16,8 @@ def test_defaults_match_the_app_container() -> None:
     settings = Settings()
 
     assert settings.data_dir == Path("/data")
-    assert settings.trusted_proxies == [INGRESS_GATEWAY]
+    # The gateway, plus loopback for the container's own Docker HEALTHCHECK.
+    assert settings.trusted_proxies == [INGRESS_GATEWAY, LOOPBACK]
     assert settings.port == 8099
     assert settings.dev_mode is False
     assert settings.database_path == Path("/data/homestead_finance.db")
