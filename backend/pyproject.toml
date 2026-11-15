@@ -1,0 +1,72 @@
+[project]
+name = "homestead-finance"
+version = "0.0.0"
+description = "Farm finance and records for homesteads, as a Home Assistant app."
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi>=0.163.0",
+    "pydantic-settings>=2.16.3",
+    "sqlalchemy>=2.1.8",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "hypothesis>=6.170.15",
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11"]
+build-backend = "uv_build"
+
+[tool.uv]
+# The app version comes from homestead_finance/config.yaml (HF_VERSION at runtime),
+# so the Python package version stays 0.0.0.
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W", "F",  # pycodestyle, pyflakes
+  "I",            # isort
+  "B",            # bugbear
+  "UP",           # pyupgrade
+  "SIM",          # simplify
+  "C4",           # comprehensions
+  "RET",          # return statements
+  "N",            # naming
+  "DTZ",          # timezone-aware datetimes
+  "PT",           # pytest style
+  "PTH",          # pathlib
+  "S",            # bandit (security)
+  "RUF",          # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"src/homestead_finance/migrations/versions/**" = ["N999"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["homestead_finance"]
+
+[tool.pyright]
+include = ["src", "tests"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+strict = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+filterwarnings = ["error"]
