@@ -1,0 +1,5 @@
+configuration:
+  log_level:
+    name: Log level
+    description: >-
+      How much detail the app writes to its log. Use "debug" when you report a problem.

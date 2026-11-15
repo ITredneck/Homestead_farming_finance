@@ -9,8 +9,8 @@
     <rect x="50" y="76" width="28" height="30" fill="#2b8a3e"/>
     <path d="M50 76 L78 106 M78 76 L50 106" stroke="#fff8e7" stroke-width="4"/>
   </g>
-  <g font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="27" font-weight="700" fill="#2b8a3e">
-    <text x="102" y="45">Homestead</text>
-    <text x="102" y="77">Finance</text>
+  <g font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="25" font-weight="700" fill="#2b8a3e">
+    <text x="104" y="45">Homestead</text>
+    <text x="104" y="76">Finance</text>
   </g>
 </svg>

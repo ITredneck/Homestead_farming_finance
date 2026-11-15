@@ -1,0 +1,147 @@
+name: App image
+
+# Pull requests: build both architectures and smoke-test them; nothing is pushed.
+# Tags v*: the same, then push per-arch images and a multi-arch manifest to GHCR.
+# Release steps are in CLAUDE.md (Commands > Release).
+on:
+  pull_request:
+    paths:
+      - backend/**
+      - frontend/**
+      - docker/**
+      - homestead_finance/**
+      - .dockerignore
+      - .github/workflows/image.yml
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Registry paths must be lowercase.
+  REGISTRY_PREFIX: ghcr.io/itredneck
+  IMAGE_NAME: homestead-finance
+  ARCHITECTURES: '["amd64", "aarch64"]'
+
+jobs:
+  information:
+    name: Version and build matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Read the version from config.yaml
+        id: version
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' homestead_finance/config.yaml)
+          if [ -z "$version" ]; then
+            echo "::error::No version found in homestead_finance/config.yaml"
+            exit 1
+          fi
+          publish=false
+          if [[ "$REF" == refs/tags/v* ]]; then
+            if [ "${REF_NAME#v}" != "$version" ]; then
+              echo "::error::Tag $REF_NAME doesn't match version $version in homestead_finance/config.yaml"
+              exit 1
+            fi
+            publish=true
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - name: Build matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.09.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+          registry-prefix: ${{ env.REGISTRY_PREFIX }}
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: information
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Cosign signing
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.information.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build
+        uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          context: .
+          file: docker/Dockerfile
+          image: ${{ matrix.image }}
+          image-tags: ${{ needs.information.outputs.version }}
+          version: ${{ needs.information.outputs.version }}
+          labels: |
+            io.hass.type=app
+            io.hass.name=Homestead Finance
+            io.hass.description=Farm finance and records for homesteads
+            io.hass.url=https://github.com/${{ github.repository }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          load: "true"
+          push: "false"
+          cosign: "false"
+
+      - name: Smoke test
+        env:
+          IMAGE: ${{ matrix.image }}:${{ needs.information.outputs.version }}
+          VERSION: ${{ needs.information.outputs.version }}
+        run: sh docker/smoke-test.sh "$IMAGE" "$VERSION"
+
+      - name: Push and sign
+        if: needs.information.outputs.publish == 'true'
+        uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          context: .
+          file: docker/Dockerfile
+          image: ${{ matrix.image }}
+          image-tags: ${{ needs.information.outputs.version }}
+          version: ${{ needs.information.outputs.version }}
+          labels: |
+            io.hass.type=app
+            io.hass.name=Homestead Finance
+            io.hass.description=Farm finance and records for homesteads
+            io.hass.url=https://github.com/${{ github.repository }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          push: "true"
+
+  manifest:
+    name: Publish multi-arch manifest
+    needs: [information, build]
+    if: needs.information.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Cosign signing
+    steps:
+      - uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.09.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+          image-tags: ${{ needs.information.outputs.version }}
+          registry-prefix: ${{ env.REGISTRY_PREFIX }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}

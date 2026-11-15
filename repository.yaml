@@ -1,0 +1,5 @@
+# Home Assistant app repository. Add this repository's URL under
+# Settings > Apps > App store > Repositories.
+name: Homestead Finance
+url: https://github.com/ITredneck/Homestead_farming_finance
+maintainer: ITredneck

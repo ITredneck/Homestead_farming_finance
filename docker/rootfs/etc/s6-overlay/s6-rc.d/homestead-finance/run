@@ -1,0 +1,4 @@
+#!/command/with-contenv sh
+# shellcheck shell=sh
+# Starts Homestead Finance. Settings come from HF_* variables and /data/options.json.
+exec python -m homestead_finance

@@ -1,0 +1,20 @@
+#!/bin/sh
+# Stops the container when the app fails, so the Supervisor sees it (and its watchdog can
+# restart it) instead of s6 restarting the app quietly.
+# From s6: $1 = exit code (256 when killed by a signal), $2 = the signal number.
+results=/run/s6-linux-init-container-results/exitcode
+container_code=$(cat "$results" 2>/dev/null || echo 0)
+
+if [ "$1" -eq 256 ]; then
+  if [ "$container_code" -eq 0 ]; then
+    echo $((128 + $2)) > "$results"
+  fi
+  if [ "$2" -eq 15 ]; then
+    exec /run/s6/basedir/bin/halt
+  fi
+elif [ "$1" -ne 0 ]; then
+  if [ "$container_code" -eq 0 ]; then
+    echo "$1" > "$results"
+  fi
+  exec /run/s6/basedir/bin/halt
+fi
